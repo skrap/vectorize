@@ -1,6 +1,6 @@
 #pragma once
 
-#include <xmmintrin.h>
+#include <vectorize/arch.h>
 #include <cmath>
 #include <algorithm>
 
@@ -22,7 +22,7 @@ namespace vectorize {
   public:
     Constant(float value) : _value(value) {}
     template <unsigned N>
-    __m128 apply(__m128(&)[N]) const { return _mm_set1_ps(_value); }
+      arch::float32x4_t apply(arch::float32x4_t(&)[N]) const { return arch::vec_set(_value); }
     template <unsigned N>
     float apply(float(&)[N]) const { return _value; }
   private:
@@ -44,8 +44,8 @@ namespace vectorize {
   };
 
   struct AddOp {
-    static __m128 eval(__m128 x, __m128 y) {
-      return _mm_add_ps(x, y);
+    static arch::float32x4_t eval(arch::float32x4_t x, arch::float32x4_t y) {
+        return arch::vec_add(x, y);
     }
     static float eval(float x, float y) {
       return x + y;
@@ -53,8 +53,8 @@ namespace vectorize {
   };
 
   struct SubOp {
-    static __m128 eval(__m128 x, __m128 y) {
-      return _mm_sub_ps(x, y);
+    static arch::float32x4_t eval(arch::float32x4_t x, arch::float32x4_t y) {
+        return arch::vec_sub(x, y);
     }
     static float eval(float x, float y) {
       return x - y;
@@ -62,8 +62,8 @@ namespace vectorize {
   };
 
   struct MulOp {
-    static __m128 eval(__m128 x, __m128 y) {
-      return _mm_mul_ps(x, y);
+    static arch::float32x4_t eval(arch::float32x4_t x, arch::float32x4_t y) {
+        return arch::vec_mul(x, y);
     }
     static float eval(float x, float y) {
       return x * y;
@@ -71,8 +71,8 @@ namespace vectorize {
   };
 
   struct MaxOp {
-    static __m128 eval(__m128 x, __m128 y) {
-      return _mm_max_ps(x, y);
+    static arch::float32x4_t eval(arch::float32x4_t x, arch::float32x4_t y) {
+        return arch::vec_max(x, y);
     }
     static float eval(float x, float y) {
       return std::max(x, y);
@@ -80,8 +80,8 @@ namespace vectorize {
   };
 
   struct MinOp {
-    static __m128 eval(__m128 x, __m128 y) {
-      return _mm_min_ps(x, y);
+    static arch::float32x4_t eval(arch::float32x4_t x, arch::float32x4_t y) {
+        return arch::vec_min(x, y);
     }
     static float eval(float x, float y) {
       return std::min(x, y);
@@ -95,7 +95,7 @@ namespace vectorize {
     Expr() : _t() {}
 
     template <unsigned N>
-    __m128 apply(__m128 (&x)[N]) const {
+    arch::float32x4_t apply(arch::float32x4_t (&x)[N]) const {
       return _t.apply(x);
     }
     template <unsigned N>
@@ -148,7 +148,7 @@ namespace vectorize {
     UnaryOp(const T& t) : _t(t) {}
 
     template <unsigned N>
-    __m128 apply(__m128 (&x)[N]) const {
+    arch::float32x4_t apply(arch::float32x4_t (&x)[N]) const {
       return Op::eval(_t.apply(x));
     }
     template <unsigned N>
@@ -160,8 +160,8 @@ namespace vectorize {
   };
 
   struct AbsOp {
-    static __m128 eval(__m128 x) {
-      return _mm_andnot_ps(_mm_set1_ps(-0.0f), x);
+    static arch::float32x4_t eval(arch::float32x4_t x) {
+        return arch::vec_abs(x);
     }
     static float eval(float x) {
       return std::abs(x);
@@ -169,8 +169,8 @@ namespace vectorize {
   };
 
   struct SqrtOp {
-    static __m128 eval(__m128 x) {
-      return _mm_sqrt_ps(x);
+    static arch::float32x4_t eval(arch::float32x4_t x) {
+        return arch::vec_sqrt(x);
     }
     static float eval(float x) {
       return std::sqrt(x);
@@ -195,8 +195,8 @@ namespace vectorize {
   template <class F>
   void apply(unsigned n, const float* src, float* target, F f) {
     for (; n>=4; n-=4, src+=4, target+=4) {
-      __m128 x[]= { _mm_load_ps(src) };
-      _mm_store_ps(target, f.apply(x));
+        arch::float32x4_t x[]= { arch::vec_load(src) };
+        arch::vec_store(target, f.apply(x));
     }
 
     for (; n>0; --n, ++src, ++target) {
@@ -209,8 +209,8 @@ namespace vectorize {
   void apply2(unsigned n, const float* src1, const float* src2,
               float* target, F f) {
     for (; n>=4; n-=4, src1+=4, src2+=4, target+=4) {
-      __m128 x[]= { _mm_load_ps(src1), _mm_load_ps(src2) };
-      _mm_store_ps(target, f.apply(x));
+        arch::float32x4_t x[]= { arch::vec_load(src1), arch::vec_load(src2) };
+        arch::vec_store(target, f.apply(x));
     }
 
     for (; n>0; --n, ++src1, ++src2, ++target) {
